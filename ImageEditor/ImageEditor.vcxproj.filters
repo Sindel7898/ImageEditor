@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ImageEditor.cpp">
+    <ClCompile Include="ImageProcessor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Farm.cpp">
@@ -26,7 +26,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ImageEditor.h">
+    <ClInclude Include="ImageProcessor.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Farm.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
