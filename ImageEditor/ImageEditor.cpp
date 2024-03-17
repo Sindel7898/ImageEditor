@@ -12,7 +12,7 @@ void ImageProcessor::CheckPixelQuality(cv::Mat& inputImage, int Start, int End)
             cv::Vec3b pixel = inputImage.at<cv::Vec3b>(i, j);
             double saturation = ComputeSaturation(pixel);
 
-            //if (saturation < 1)
+            if (saturation < 1)
             {
                 Boostcolor(pixel);
             }
@@ -35,15 +35,13 @@ double ImageProcessor::ComputeSaturation(cv::Vec3b Pixel)
 
 void ImageProcessor::Boostcolor(cv::Vec3b& Pixel)
 {
-    const double boostFactor = 1.4;
+    const double boostFactor = 2;
 
     Pixel[0] = static_cast<uchar>(std::min(boostFactor * Pixel[0], 255.0));  // Boost blue channel
     Pixel[1] = static_cast<uchar>(std::min(boostFactor * Pixel[1], 255.0));  // Boost green channel
     Pixel[2] = static_cast<uchar>(std::min(boostFactor * Pixel[2], 255.0));  // Boost red channel
 
 }
-
-
 
 
 cv::Mat ImageProcessor::ResizeImage(cv::Mat& inputImage)
@@ -62,38 +60,28 @@ cv::Mat ImageProcessor::ResizeImage(cv::Mat& inputImage)
 
 
 
-void ImageProcessor::AdjustWhiteBalance(cv::Mat& inputImage, double RedGain, double BlueGain, double Green)
+void ImageProcessor::applyDetailEnhanceToROI(cv::Mat& inputImage, const cv::Rect& roi)
 {
-    std::vector<cv::Mat> channels;
+    // Ensure the ROI is within the image bounds
+    cv::Rect validROI = roi & cv::Rect(0, 0, inputImage.cols, inputImage.rows);
 
-    cv::split(inputImage, channels);
+    // Create a mask for the ROI
+    cv::Mat mask = cv::Mat::zeros(inputImage.size(), CV_8U);
+    mask(validROI) = 255;
 
-    channels[0] = channels[0] * RedGain;
-    channels[1] = channels[1] * BlueGain;
-    channels[2] = channels[2] * Green;
-
-    return cv::merge(channels, inputImage);
+    // Apply detailEnhance only to the ROI
+    cv::Mat roiImage = inputImage(validROI);
+    cv::detailEnhance(roiImage, roiImage, 2.f, 0.1f);
+    cv::medianBlur(roiImage, roiImage,3);
+    cv::addWeighted(roiImage, 1.2, roiImage, -0.1, 0.3, roiImage);
 }
 
 
-
-int ImageProcessor::ImageMainSingleThread()
+void ImageProcessor::ExecuteTasks(cv::Mat image, float starY, float endY)
 {
-
-    img = cv::imread("../Images/IMAGE4K2.jpg");
-
-    //CheckPixelQuality(img);
-    cv::detailEnhance(img, img, 2.f, 0.1f);
-    cv::medianBlur(img, img, 3);
-    cv::bilateralFilter(img, bilateralFilterOutPut, -1, 4, 10);
-    AdjustWhiteBalance(bilateralFilterOutPut, 1.12, 1.12, 1.12);
-  
-
-     
-    ResizeImage(bilateralFilterOutPut);
-    std::string outputFilePath = "resized_image.png";
-    imwrite(outputFilePath, bilateralFilterOutPut);
-    
+    CheckPixelQuality(image, starY, endY);
+    cv::Rect roi(0, starY, img.cols, endY - starY);
+    applyDetailEnhanceToROI(img, roi);
 }
 
 
@@ -101,88 +89,40 @@ int ImageProcessor::ImageMainMultiThread()
 {
 
 
-     // auto clock_start = std::chrono::steady_clock::now();
+        auto clock_start = std::chrono::steady_clock::now();
       
-         img = cv::imread("../Images/Image1.png");
+         img = cv::imread("../Images/IMAGE2.png");  
 
-        int NumberOfThreads = std::thread::hardware_concurrency();
+        int NumberOfThreads = 2;//std::thread::hardware_concurrency();
         int rowsPerThread = img.rows / NumberOfThreads;
 
-        //std::vector<std::thread> threadsVector (NumberOfThreads);
+        std::vector<std::thread> threadsVector;
 
-        //for (int i = 0; i < NumberOfThreads; i++) {
+        for (int i = 0; i < NumberOfThreads; i++) {
 
-            // startY = i * rowsPerThread;
-            // EndY = (i + 1) * rowsPerThread;
+             startY = i * rowsPerThread;
+             EndY = (i + 1) * rowsPerThread;
 
-            
-       //  }
+             threadsVector.push_back(std::thread(&ImageProcessor::ExecuteTasks, this, std::ref(img), startY, EndY));    
+        }
+       
 
-        CheckPixelQuality(img, 100,400);
-
-
-        //auto StartPixel([&]() {
-
-          //  CheckPixelQuality(img, startY, EndY);
-
-            //}); 
-
-
-       // for (int i = 0; i < NumberOfThreads; ++i) {
-
-       //     threadsVector[i] = std::thread(StartPixel);
-
-       // }
-
-        //for (std::thread& t : threadsVector) {
-
-         //   t.join();
-       // }
-          //std::thread ColorBoostThread(&ImageProcessor::CheckPixelQuality,this,std::ref(img));
-          //ColorBoostThread.join();
-            
-
-         // std::thread DetailThread([&]() {
-         //       cv::detailEnhance(img, img, 2.f, 0.1f);
-         //     });
-
-        //  DetailThread.join();
-          
-        //  std::thread MedianBlurThread([&]() {
-        //      cv::medianBlur(img, img,3);
-         //     });
-
-          //MedianBlurThread.join();
-
-        //  std::thread addWeightedthread([&]() {
-        //      //cv::addWeighted(img, 1.2, img, -0.1, 0.3, img);
-        //      cv::bilateralFilter(img, bilateralFilterOutPut, -1, 4, 10);
-//
-         //     });
-
-         // addWeightedthread.join();
-
-         // std::thread AdjectWhiteBalance([&]() {
-              //cv::addWeighted(img, 1.2, img, -0.1, 0.3, img);
-           //   AdjustWhiteBalance(bilateralFilterOutPut, 1.12, 1.12,1.12);
-           //   });
-
-          //AdjectWhiteBalance.join();
-        
+       for (auto& t : threadsVector) {
+          t.join();
+        }
         
 
-        // ResizeImage(bilateralFilter);
+         // ResizeImage(img);
          // if (ShouldImageBeShown) {
-
-             cv::imshow("Window", img);
-             cv::waitKey(0);
+       
+           //  cv::imshow("Window", img);
+           //  cv::waitKey(0);
          // }
        
  
 
-          ResizeImage(bilateralFilterOutPut);
           std::string outputFilePath = "resized_image.png";
-          cv::imwrite(outputFilePath, bilateralFilterOutPut);
+          cv::imwrite(outputFilePath, img);
 
 }
 
@@ -197,26 +137,26 @@ int main()
         const int numIterations = 20;
         long long totalTime = 0;
 
-        //for (int i = 0; i < numIterations; ++i)
-        //{
+        for (int i = 0; i < numIterations; ++i)
+        {
             auto start = std::chrono::steady_clock::now();
 
-           // if (i == 20) {
-              //  imageProcessor.ShouldImageBeShown = true;
-           // }
+           if (i == 20) {
+                imageProcessor.ShouldImageBeShown = true;
+            }
 
             imageProcessor.ImageMainMultiThread();
 
             auto end = std::chrono::steady_clock::now();
 
             auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-           // std::cout << "Iteration " << i + 1 << ": " << elapsed_time.count() << " milliseconds" << std::endl;
+            std::cout << "Iteration " << i + 1 << ": " << elapsed_time.count() << " milliseconds" << std::endl;
 
 
             totalTime += elapsed_time.count();
 
             
-       // }
+        }
 
         double averageTime = static_cast<double>(totalTime) / numIterations;
         std::cout << "Average time over " << numIterations << " iterations: " << averageTime << " milliseconds" << std::endl;

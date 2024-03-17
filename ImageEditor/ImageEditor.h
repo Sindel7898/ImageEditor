@@ -21,20 +21,16 @@ public:
 	cv::Mat  img;
 	std::mutex PixelMutex;
 	bool ShouldImageBeShown = false;
-	//cv::Mat Detailed;
-	//cv::Mat MedianBlur;
-	//cv::Mat ResizedImage;
-	//cv::Mat AddedWeight;
+	std::condition_variable cv;
 	cv::Mat bilateralFilterOutPut;
-	//cv::Mat ColorHist;
-	//cv::Mat result;
-	int startY;
-	int EndY;
+	
+	float startY;
+	float  EndY;
 	cv::Mat ResizeImage(cv::Mat& inputImage);
-	void AdjustWhiteBalance(cv::Mat& inputImage, double RedGain, double BlueGain, double Green);
-	int ImageMainSingleThread();
+	void applyDetailEnhanceToROI(cv::Mat& inputImage, const cv::Rect& roi);
 	int ImageMainMultiThread();
 	void CheckPixelQuality(cv::Mat& inputImage, int Start, int End);
 	double ComputeSaturation(cv::Vec3b Pixel);
 	void Boostcolor(cv::Vec3b& Pixel);
+	void ExecuteTasks(cv::Mat image, float starY, float endY);
 };
