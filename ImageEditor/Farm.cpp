@@ -10,7 +10,7 @@ void Farm::add_task(Task task)
 
 void Farm::run(ImageProcessor* processor)
 {
-	int numThreads = 64; //std::thread::hardware_concurrency();
+	int numThreads = std::thread::hardware_concurrency();
 	std::vector<std::thread> ThreadVector;
 
 	auto Execute = [&]() {
@@ -41,6 +41,13 @@ void Farm::run(ImageProcessor* processor)
 
 	for (auto& thread : ThreadVector) {
 		thread.join(); // Join threads
-	
 	}
+
+	{
+		std::lock_guard<std::mutex> lock(processor->ReizeMutex);
+		processor->readytoresizev = true;
+	}
+
+	processor->cv.notify_all();
+
 }

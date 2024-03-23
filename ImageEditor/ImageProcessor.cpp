@@ -3,37 +3,41 @@
 
 ImageProcessor::ImageProcessor(Farm& farm) : farm(&farm) {}
 
+//initial check to decide if pixel color should be boosted 
 void ImageProcessor::CheckPixelQuality(cv::Mat& inputImage, int Start, int End)
 {
+    //controls acessing to prevent race conditions
      std::lock_guard<std::mutex>lock(PixelMutex);
 
+     //loops through the image
      for (int i = Start; i < End; ++i) {
         for (int j = 0; j < inputImage.cols; ++j) {
 
+            //extracts pixel
             cv::Vec3b pixel = inputImage.at<cv::Vec3b>(i, j);
+
             double saturation = ComputeSaturation(pixel);
 
             if (saturation < 1)
             {
                 Boostcolor(pixel);
             }
-
+            //replace the edited pixel witht the one that was prevoiusly there
             inputImage.at<cv::Vec3b>(i, j) = pixel;
         }
     }
 }
 
+//calculate image saturation
 double ImageProcessor::ComputeSaturation(cv::Vec3b Pixel)
 {
     cv::Mat3b hsv;
     cv::cvtColor(cv::Mat3b(1, 1, const_cast<cv::Vec3b*>(&Pixel)), hsv, cv::COLOR_BGR2HSV);
-
     double saturation = hsv(0, 0)[1] / 255.0;
-    //std::cout << "CurrentPixel Intensity   " << saturation << std::endl;
-
     return saturation;
 }
 
+//bosts image color by increasing the color on each pixel by a set value
 void ImageProcessor::Boostcolor(cv::Vec3b& Pixel)
 {
     const double boostFactor = 2;
@@ -44,23 +48,21 @@ void ImageProcessor::Boostcolor(cv::Vec3b& Pixel)
 
 }
 
-
+//resizes Image to 4k resolution 
 cv::Mat ImageProcessor::ResizeImage(cv::Mat& inputImage)
 {
     int OriginalWidth = inputImage.cols;
     int OriginalHeight = inputImage.rows;
-    double aspectratio = static_cast<double>(OriginalWidth / OriginalHeight);                                     
 
     int NewWidth = 3840;
     int NewHeight = 2160;
 
-    std:Mat ResizedImage;
-    cv::resize(inputImage, ResizedImage, cv::Size(NewWidth, NewHeight));
-    return ResizedImage;
+    cv::resize(inputImage, img, cv::Size(NewWidth, NewHeight));
+    return img;
 }
 
 
-
+//apply enhancements on only speic parts of the image so image effects can be ran on seperate threads
 void ImageProcessor::applyDetailEnhanceToROI(cv::Mat& inputImage, const cv::Rect& roi)
 {
     // Ensure the ROI is within the image bounds
@@ -77,29 +79,28 @@ void ImageProcessor::applyDetailEnhanceToROI(cv::Mat& inputImage, const cv::Rect
     cv::addWeighted(roiImage, 1.2, roiImage, -0.1, 0.3, roiImage);
 }
 
-
-/*void ImageProcessor::ExecuteTasks(cv::Mat image, float starY, float endY)
+//tasks to excecute
+void ImageProcessor::ExecuteTasks(cv::Mat image, float starY, float endY)
 {
     CheckPixelQuality(image, starY, endY);
     cv::Rect roi(0, starY, img.cols, endY - starY);
     applyDetailEnhanceToROI(img, roi);
-}*/
+}
 
 
-/*
+
 int ImageProcessor::ImageMainMultiThread()
-{
-
-
-        auto clock_start = std::chrono::steady_clock::now();
-      
+{      
+         //loads image
          img = cv::imread("../Images/IMAGE2.png");  
 
-        int NumberOfThreads = 2;//std::thread::hardware_concurrency();
+         //sets the amount of threads to run change depending on how many you want 
+        int NumberOfThreads = std::thread::hardware_concurrency();
         int rowsPerThread = img.rows / NumberOfThreads;
 
         std::vector<std::thread> threadsVector;
 
+        //devides the imaged into different parts for a thread to compute
         for (int i = 0; i < NumberOfThreads; i++) {
 
              startY = i * rowsPerThread;
@@ -108,39 +109,63 @@ int ImageProcessor::ImageMainMultiThread()
              threadsVector.push_back(std::thread(&ImageProcessor::ExecuteTasks, this, std::ref(img), startY, EndY));    
         }
        
-
+        //joinds back all threads
        for (auto& t : threadsVector) {
           t.join();
         }
-        
-
-         // ResizeImage(img);
-         // if (ShouldImageBeShown) {
        
-           //  cv::imshow("Window", img);
-           //  cv::waitKey(0);
-         // }
         
-
+          //resize image then output it writen to a file 
+          img =  ResizeImage(img);
           std::string outputFilePath = "resized_image.png";
           cv::imwrite(outputFilePath, img);
 }
-*/
 
-int ImageProcessor::ImageMainMultiThread() {
-    // Assuming you want to process an image in parallel with the farm
-    // You can split the image into rows and assign each row to a task in the farm
+int ImageProcessor::ImageSingleThread()
+{
+    //loads image
+    img = cv::imread("../Images/IMAGE2.png");
+    //sets number of splits needed set to 1 becuase we are only running 1 thread
+    int NumberOfThreads = 1;
+    int rowsPerThread = img.rows / NumberOfThreads;
+
+    // runs pixel thread based on split
+    for (int i = 0; i < NumberOfThreads; i++) {
+
+        startY = i * rowsPerThread;
+        EndY = (i + 1) * rowsPerThread;
+
+        CheckPixelQuality(img, startY, EndY);
+    }
+
+    // applies different enhancements to image
+    cv::detailEnhance(img, img, 2.f, 0.1f);
+    cv::medianBlur(img, img, 3);
+    cv::addWeighted(img, 1.2, img, -0.1, 0.3, img);
+
+    //resize image then output it writen to a file 
+    img = ResizeImage(img);
+    std::string outputFilePath = "resized_image.png";
+    cv::imwrite(outputFilePath, img);
+}
+
+
+int ImageProcessor::ImageMainMultiThreadWithFarm() {
+
+    //loads image
     img = cv::imread("../Images/IMAGE2.png");
 
-    int NumberOfThreads = 60;
-    int rowsPerThread = img.rows / NumberOfThreads;
+
+    int NumberOfThreads = std::thread::hardware_concurrency();
+    float  rowsPerThread = img.rows / static_cast<float>(NumberOfThreads);
 
     std::vector<Task> tasks;
 
-    for (int i = 0; i < NumberOfThreads; i++) {
+    for (float  i = 0; i < NumberOfThreads; i++) {
         float startY = i * rowsPerThread;
         float endY = (i + 1) * rowsPerThread;
-    ;
+    
+        std::lock_guard<std::mutex>lock(ImageMutex);
         tasks.push_back({ img,startY,endY });
     }
 
@@ -148,15 +173,31 @@ int ImageProcessor::ImageMainMultiThread() {
     for (const auto& task : tasks) {
         farm->add_task(task);
     }
+    
 
-    farm->run(this);
+     auto Risizer = std::async(std::launch::async, [this]()
+        {
+            return ResizeImage(img);
+        });
+
+
+     farm->run(this);
+     std::unique_lock<std::mutex> lock(ReizeMutex);
+     cv.wait(lock, [this] { return readytoresizev; });
+
+     cv::Mat resizedImage = Risizer.get();
+
+ 
     std::string outputFilePath = "resized_image.png";
-    cv::imwrite(outputFilePath, img);
+    cv::imwrite(outputFilePath, resizedImage);
 }
+
+
 
 int main()
 {
-         Farm farm;
+
+        Farm farm;
         ImageProcessor imageProcessor(farm);
 
         const int numIterations = 20;
@@ -164,14 +205,11 @@ int main()
 
         for (int i = 0; i < numIterations; ++i)
         {
-            auto start = std::chrono::steady_clock::now();
+               auto start = std::chrono::steady_clock::now();
 
-           if (i == 20) {
-                imageProcessor.ShouldImageBeShown = true;
-            }
-
-            imageProcessor.ImageMainMultiThread();
-
+               //imageProcessor.ImageMainMultiThreadWithFarm();
+               imageProcessor.ImageSingleThread();
+              // imageProcessor.ImageMainMultiThread();
             auto end = std::chrono::steady_clock::now();
 
             auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
@@ -187,8 +225,4 @@ int main()
         std::cout << "Average time over " << numIterations << " iterations: " << averageTime << " milliseconds" << std::endl;
 
         return 0;
-    
-
 }
-
-

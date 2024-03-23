@@ -10,8 +10,9 @@
 #include <thread>
 #include <vector>
 #include<mutex>
-
-
+#include<future>
+#include<algorithm>
+#include<atomic>
 
 using namespace std;
 using namespace cv;
@@ -22,10 +23,16 @@ class ImageProcessor {
 public:
 	 ImageProcessor(Farm& farm);
 	Farm* farm;
-	cv::Mat  img;
+
+	cv::Mat img;
+	std::mutex ImageMutex;
 	std::mutex PixelMutex;
-	bool ShouldImageBeShown = false;
+
+	std::mutex ReizeMutex;
 	std::condition_variable cv;
+
+	bool readytoresizev = false;
+
 	cv::Mat bilateralFilterOutPut;
 	
 	float startY;
@@ -33,6 +40,10 @@ public:
 	cv::Mat ResizeImage(cv::Mat& inputImage);
 	void applyDetailEnhanceToROI(cv::Mat& inputImage, const cv::Rect& roi);
 	int ImageMainMultiThread();
+	int ImageSingleThread();
+
+	int ImageMainMultiThreadWithFarm();
+
 	void CheckPixelQuality(cv::Mat& inputImage, int Start, int End);
 	double ComputeSaturation(cv::Vec3b Pixel);
 	void Boostcolor(cv::Vec3b& Pixel);
