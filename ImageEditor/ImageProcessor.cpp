@@ -92,7 +92,7 @@ void ImageProcessor::ExecuteTasks(cv::Mat image, float starY, float endY)
 int ImageProcessor::ImageMainMultiThread()
 {      
          //loads image
-         img = cv::imread("../Images/IMAGE2.png");  
+         img = cv::imread(Image1);
 
          //sets the amount of threads to run change depending on how many you want 
         int NumberOfThreads = std::thread::hardware_concurrency();
@@ -124,7 +124,7 @@ int ImageProcessor::ImageMainMultiThread()
 int ImageProcessor::ImageSingleThread()
 {
     //loads image
-    img = cv::imread("../Images/IMAGE2.png");
+    img = cv::imread(Image1);
     //sets number of splits needed set to 1 becuase we are only running 1 thread
     int NumberOfThreads = 1;
     int rowsPerThread = img.rows / NumberOfThreads;
@@ -153,18 +153,21 @@ int ImageProcessor::ImageSingleThread()
 int ImageProcessor::ImageMainMultiThreadWithFarm() {
 
     //loads image
-    img = cv::imread("../Images/IMAGE2.png");
+    img = cv::imread(Image1);
 
-
+    //sets the amount of threads to run change depending on how many you want 
     int NumberOfThreads = std::thread::hardware_concurrency();
     float  rowsPerThread = img.rows / static_cast<float>(NumberOfThreads);
 
     std::vector<Task> tasks;
 
+    //devides the imaged into different parts for a thread to compute
+    // converts the data into the task struct and add it into the tasks vector
     for (float  i = 0; i < NumberOfThreads; i++) {
         float startY = i * rowsPerThread;
         float endY = (i + 1) * rowsPerThread;
-    
+        
+        //controls acessing to prevent race conditions
         std::lock_guard<std::mutex>lock(ImageMutex);
         tasks.push_back({ img,startY,endY });
     }
@@ -175,19 +178,23 @@ int ImageProcessor::ImageMainMultiThreadWithFarm() {
     }
     
 
+    //async to resize image 
      auto Risizer = std::async(std::launch::async, [this]()
         {
             return ResizeImage(img);
         });
 
-
+     // runs the farm
      farm->run(this);
+
      std::unique_lock<std::mutex> lock(ReizeMutex);
      cv.wait(lock, [this] { return readytoresizev; });
 
+     // gets the resized image from the promise
      cv::Mat resizedImage = Risizer.get();
 
  
+     //writes the outputed image to a file
     std::string outputFilePath = "resized_image.png";
     cv::imwrite(outputFilePath, resizedImage);
 }
@@ -196,29 +203,27 @@ int ImageProcessor::ImageMainMultiThreadWithFarm() {
 
 int main()
 {
-
+       // initialise farm an image procesor 
         Farm farm;
         ImageProcessor imageProcessor(farm);
-
+       
         const int numIterations = 20;
         long long totalTime = 0;
 
+        // perform tasks the number of iterations and them record the time an canculate the average
         for (int i = 0; i < numIterations; ++i)
-        {
-               auto start = std::chrono::steady_clock::now();
+        {        
+               auto start = std::chrono::steady_clock::now(); //starts tyimer
 
-               //imageProcessor.ImageMainMultiThreadWithFarm();
-               imageProcessor.ImageSingleThread();
-              // imageProcessor.ImageMainMultiThread();
-            auto end = std::chrono::steady_clock::now();
+               imageProcessor.ImageMainMultiThreadWithFarm();
+               // imageProcessor.ImageSingleThread();
+              //imageProcessor.ImageMainMultiThread();
+            auto end = std::chrono::steady_clock::now();//emd timer
 
             auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
             std::cout << "Iteration " << i + 1 << ": " << elapsed_time.count() << " milliseconds" << std::endl;
 
-
             totalTime += elapsed_time.count();
-
-            
         }
 
         double averageTime = static_cast<double>(totalTime) / numIterations;

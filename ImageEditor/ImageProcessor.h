@@ -24,6 +24,7 @@ public:
 	 ImageProcessor(Farm& farm);
 	Farm* farm;
 
+	string Image1 = "../Images/IMAGE2.png";
 	cv::Mat img;
 	std::mutex ImageMutex;
 	std::mutex PixelMutex;
