@@ -6,9 +6,7 @@ ImageProcessor::ImageProcessor(Farm& farm) : farm(&farm) {}
 //initial check to decide if pixel color should be boosted 
 void ImageProcessor::CheckPixelQuality(cv::Mat& inputImage, int Start, int End)
 {
-    //controls acessing to prevent race conditions
-     std::lock_guard<std::mutex>lock(PixelMutex);
-
+    std::lock_guard<std::mutex>lock(PixelMutex);
      //loops through the image
      for (int i = Start; i < End; ++i) {
         for (int j = 0; j < inputImage.cols; ++j) {
@@ -93,7 +91,7 @@ int ImageProcessor::ImageMainMultiThread()
          img = cv::imread(Image1);
 
          //sets the amount of threads to run change depending on how many you want 
-         int NumberOfThreads = std::thread::hardware_concurrency();
+         int NumberOfThreads = 64;
         int rowsPerThread = img.rows / NumberOfThreads;
 
         std::vector<std::thread> threadsVector;
@@ -154,7 +152,24 @@ int ImageProcessor::ImageMainMultiThreadWithFarm() {
     img = cv::imread(Image1);
 
     //sets the amount of threads to run change depending on how many you want 
-    int NumberOfTasks = 1000;
+    int Numofthreads = farm->GetNumOfThreads();
+
+    if (Numofthreads == 64 ) {
+        NumberOfTasks = 70;
+    }
+
+    if (Numofthreads == 32) {
+        NumberOfTasks = 130;
+    }
+
+    if (Numofthreads == 16) {
+        NumberOfTasks = 900;
+    }
+
+    if (Numofthreads < 16) {
+        NumberOfTasks = 900;
+    }
+
     float  rowsPerThread = img.rows / static_cast<float>(NumberOfTasks);
 
     std::vector<Task> tasks;
@@ -214,9 +229,9 @@ int main()
         {        
                auto start = std::chrono::steady_clock::now(); //starts tyimer
 
-             imageProcessor.ImageMainMultiThreadWithFarm();
+               imageProcessor.ImageMainMultiThreadWithFarm();
                 //imageProcessor.ImageSingleThread();
-          // imageProcessor.ImageMainMultiThread();
+              //imageProcessor.ImageMainMultiThread();
             auto end = std::chrono::steady_clock::now();//emd timer
 
             auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);

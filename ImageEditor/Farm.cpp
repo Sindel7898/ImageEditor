@@ -14,7 +14,7 @@ void Farm::add_task(Task task)
 void Farm::run(ImageProcessor* processor)
 {
 	//num of threads farm can run 
-	int numThreads = std::thread::hardware_concurrency();
+	 numThreads = 32;
 	std::vector<std::thread> ThreadVector;
 
 	// anonymos function to excecute tasks 

@@ -18,11 +18,10 @@ private:
 	std::mutex queueMutex;
 	std::mutex resultMutex;
 	std::atomic<bool> stopThreads = false;
-
+	int numThreads;
 public:
 	void add_task(Task task);
 	void run(ImageProcessor* processor);
-
 	void stop_threads();
-
+    inline	int GetNumOfThreads() { return numThreads; };
 };

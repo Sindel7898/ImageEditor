@@ -25,28 +25,28 @@ public:
 	Farm* farm;
 
 	string Image1 = "../Images/IMAGE2.png";
+
+	int NumberOfTasks;
+	float startY;
+	float  EndY;
+
 	cv::Mat img;
 	std::mutex ImageMutex;
 	std::mutex PixelMutex;
 
 	std::mutex resize_mutex;
 	std::condition_variable cv;
-
-	bool ready_to_resize = false;
-
 	cv::Mat BilateralFilterOutPut;
-	
-	float startY;
-	float  EndY;
+
 	cv::Mat ResizeImage(cv::Mat& inputImage);
 	void applyDetailEnhanceToROI(cv::Mat& inputImage, const cv::Rect& roi);
 	int ImageMainMultiThread();
 	int ImageSingleThread();
-
 	int ImageMainMultiThreadWithFarm();
-
 	void CheckPixelQuality(cv::Mat& inputImage, int Start, int End);
 	double ComputeSaturation(cv::Vec3b Pixel);
 	void Boostcolor(cv::Vec3b& Pixel);
 	void ExecuteTasks(cv::Mat image, float starY, float endY);
+	bool ready_to_resize = false;
+
 };
