@@ -29,12 +29,12 @@ public:
 	std::mutex ImageMutex;
 	std::mutex PixelMutex;
 
-	std::mutex ReizeMutex;
+	std::mutex resize_mutex;
 	std::condition_variable cv;
 
-	bool readytoresizev = false;
+	bool ready_to_resize = false;
 
-	cv::Mat bilateralFilterOutPut;
+	cv::Mat BilateralFilterOutPut;
 	
 	float startY;
 	float  EndY;

@@ -51,8 +51,6 @@ void ImageProcessor::Boostcolor(cv::Vec3b& Pixel)
 //resizes Image to 4k resolution 
 cv::Mat ImageProcessor::ResizeImage(cv::Mat& inputImage)
 {
-    int OriginalWidth = inputImage.cols;
-    int OriginalHeight = inputImage.rows;
 
     int NewWidth = 3840;
     int NewHeight = 2160;
@@ -95,7 +93,7 @@ int ImageProcessor::ImageMainMultiThread()
          img = cv::imread(Image1);
 
          //sets the amount of threads to run change depending on how many you want 
-        int NumberOfThreads = std::thread::hardware_concurrency();
+         int NumberOfThreads = std::thread::hardware_concurrency();
         int rowsPerThread = img.rows / NumberOfThreads;
 
         std::vector<std::thread> threadsVector;
@@ -156,14 +154,14 @@ int ImageProcessor::ImageMainMultiThreadWithFarm() {
     img = cv::imread(Image1);
 
     //sets the amount of threads to run change depending on how many you want 
-    int NumberOfThreads = std::thread::hardware_concurrency();
-    float  rowsPerThread = img.rows / static_cast<float>(NumberOfThreads);
+    int NumberOfTasks = 1000;
+    float  rowsPerThread = img.rows / static_cast<float>(NumberOfTasks);
 
     std::vector<Task> tasks;
 
     //devides the imaged into different parts for a thread to compute
     // converts the data into the task struct and add it into the tasks vector
-    for (float  i = 0; i < NumberOfThreads; i++) {
+    for (float  i = 0; i < NumberOfTasks; i++) {
         float startY = i * rowsPerThread;
         float endY = (i + 1) * rowsPerThread;
         
@@ -186,9 +184,10 @@ int ImageProcessor::ImageMainMultiThreadWithFarm() {
 
      // runs the farm
      farm->run(this);
+     farm->stop_threads();
 
-     std::unique_lock<std::mutex> lock(ReizeMutex);
-     cv.wait(lock, [this] { return readytoresizev; });
+     std::unique_lock<std::mutex> lock(resize_mutex);
+     cv.wait(lock, [this] { return ready_to_resize; });
 
      // gets the resized image from the promise
      cv::Mat resizedImage = Risizer.get();
@@ -215,9 +214,9 @@ int main()
         {        
                auto start = std::chrono::steady_clock::now(); //starts tyimer
 
-               imageProcessor.ImageMainMultiThreadWithFarm();
-               // imageProcessor.ImageSingleThread();
-              //imageProcessor.ImageMainMultiThread();
+             imageProcessor.ImageMainMultiThreadWithFarm();
+                //imageProcessor.ImageSingleThread();
+          // imageProcessor.ImageMainMultiThread();
             auto end = std::chrono::steady_clock::now();//emd timer
 
             auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);

@@ -29,10 +29,10 @@ void Farm::run(ImageProcessor* processor)
 				std::lock_guard<std::mutex> lock(queueMutex);
 				if (taskQueue.empty()) {
 
-					// sets if the image is able to be resiced 
+					// sets if the image is able to be resized 
 					{
-						std::lock_guard<std::mutex> lock(processor->ReizeMutex);
-						processor->readytoresizev = true;
+						std::lock_guard<std::mutex> lock(processor->resize_mutex);
+						processor->ready_to_resize = true;
 					}
 
 					//notivies to resize image
@@ -44,12 +44,17 @@ void Farm::run(ImageProcessor* processor)
 				//adds the current task thats in the front to the current task to be done 
 				task = taskQueue.front();
 				taskQueue.pop();
+				
 			}
 
 			//effects and processes to be done 
-			processor->CheckPixelQuality(task.image, task.startY, task.endY);
-			cv::Rect roi(0, task.startY, task.image.cols, task.endY - task.startY);
-			processor->applyDetailEnhanceToROI(task.image, roi);
+
+			
+				processor->CheckPixelQuality(task.image, task.startY, task.endY);
+				cv::Rect roi(0, task.startY, task.image.cols, task.endY - task.startY);
+				processor->applyDetailEnhanceToROI(task.image, roi);
+			
+			
 		}
     };
 
@@ -62,4 +67,11 @@ void Farm::run(ImageProcessor* processor)
 	for (auto& thread : ThreadVector) {
 		thread.join(); 
 	}
+}
+
+
+// Notify threads to stop and wait for them to finish
+void Farm::stop_threads() {
+	// No need to acquire a lock as it's atomic
+	stopThreads = true;
 }

@@ -17,9 +17,12 @@ private:
 	std::queue<Task> taskQueue;
 	std::mutex queueMutex;
 	std::mutex resultMutex;
+	std::atomic<bool> stopThreads = false;
 
 public:
 	void add_task(Task task);
 	void run(ImageProcessor* processor);
+
+	void stop_threads();
 
 };
