@@ -49,11 +49,12 @@ void Farm::run(ImageProcessor* processor)
 
 			//effects and processes to be done 
 
-			
+			if (!task.image.empty()) {
 				processor->CheckPixelQuality(task.image, task.startY, task.endY);
 				cv::Rect roi(0, task.startY, task.image.cols, task.endY - task.startY);
 				processor->applyDetailEnhanceToROI(task.image, roi);
-			
+
+			}
 			
 		}
     };

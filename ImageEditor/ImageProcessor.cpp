@@ -49,7 +49,6 @@ void ImageProcessor::Boostcolor(cv::Vec3b& Pixel)
 //resizes Image to 4k resolution 
 cv::Mat ImageProcessor::ResizeImage(cv::Mat& inputImage)
 {
-
     int NewWidth = 3840;
     int NewHeight = 2160;
 
