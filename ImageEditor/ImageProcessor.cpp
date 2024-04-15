@@ -153,21 +153,17 @@ int ImageProcessor::ImageMainMultiThreadWithFarm() {
     //sets the amount of threads to run change depending on how many you want 
     int Numofthreads = farm->GetNumOfThreads();
 
-    if (Numofthreads == 64 ) {
-        NumberOfTasks = 70;
-    }
+    if (Numofthreads == 64) { NumberOfTasks = 70; }
+    
 
-    if (Numofthreads == 32) {
-        NumberOfTasks = 130;
-    }
+    if (Numofthreads == 32) { NumberOfTasks = 130; }
+    
 
-    if (Numofthreads == 16) {
-        NumberOfTasks = 900;
-    }
+    if (Numofthreads == 16) { NumberOfTasks = 900;}
+ 
 
-    if (Numofthreads < 16) {
-        NumberOfTasks = 900;
-    }
+    if (Numofthreads < 16) { NumberOfTasks = 900; }
+    
 
     float  rowsPerThread = img.rows / static_cast<float>(NumberOfTasks);
 
@@ -208,7 +204,7 @@ int ImageProcessor::ImageMainMultiThreadWithFarm() {
 
  
      //writes the outputed image to a file
-    std::string outputFilePath = "resized_image.png";
+    std::string outputFilePath = "FinalImage.png";
     cv::imwrite(outputFilePath, resizedImage);
 }
 
@@ -228,9 +224,9 @@ int main()
         {        
                auto start = std::chrono::steady_clock::now(); //starts tyimer
 
-               imageProcessor.ImageMainMultiThreadWithFarm();
-                //imageProcessor.ImageSingleThread();
-              //imageProcessor.ImageMainMultiThread();
+               //imageProcessor.ImageMainMultiThreadWithFarm();
+               //imageProcessor.ImageSingleThread();
+              imageProcessor.ImageMainMultiThread();
             auto end = std::chrono::steady_clock::now();//emd timer
 
             auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
