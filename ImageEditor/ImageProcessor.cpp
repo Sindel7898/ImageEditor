@@ -90,7 +90,7 @@ int ImageProcessor::ImageMainMultiThread()
          img = cv::imread(Image1);
 
          //sets the amount of threads to run change depending on how many you want 
-         int NumberOfThreads = 64;
+         int NumberOfThreads = 32;
         int rowsPerThread = img.rows / NumberOfThreads;
 
         std::vector<std::thread> threadsVector;

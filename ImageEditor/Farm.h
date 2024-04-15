@@ -10,7 +10,8 @@ struct Task {
 	float endY;
 };
 
-class  ImageProcessor;
+class ImageProcessor;
+
 class Farm {
 
 private:

@@ -73,6 +73,5 @@ void Farm::run(ImageProcessor* processor)
 
 // Notify threads to stop and wait for them to finish
 void Farm::stop_threads() {
-	// No need to acquire a lock as it's atomic
 	stopThreads = true;
 }
