@@ -44,6 +44,7 @@ private:
 	void ExecuteTasks(cv::Mat image, float starY, float endY);
 
 public:
+
 	Farm* farm;
 	ImageProcessor(Farm& farm);
 

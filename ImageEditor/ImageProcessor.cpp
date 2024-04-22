@@ -90,7 +90,7 @@ int ImageProcessor::ImageMainMultiThread()
          img = cv::imread(Image1);
 
          //sets the amount of threads to run change depending on how many you want 
-         int NumberOfThreads = 32;
+         int NumberOfThreads = 128;
         int rowsPerThread = img.rows / NumberOfThreads;
 
         std::vector<std::thread> threadsVector;
@@ -224,9 +224,9 @@ int main()
         {        
                auto start = std::chrono::steady_clock::now(); //starts tyimer
 
-               //imageProcessor.ImageMainMultiThreadWithFarm();
+               imageProcessor.ImageMainMultiThreadWithFarm();
                //imageProcessor.ImageSingleThread();
-              imageProcessor.ImageMainMultiThread();
+              //imageProcessor.ImageMainMultiThread();
             auto end = std::chrono::steady_clock::now();//emd timer
 
             auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);

@@ -14,7 +14,8 @@ void Farm::add_task(Task task)
 void Farm::run(ImageProcessor* processor)
 {
 	//num of threads farm can run 
-	 numThreads = 32;
+	numThreads = 128;
+
 	std::vector<std::thread> ThreadVector;
 
 	// anonymos function to excecute tasks 
@@ -35,7 +36,7 @@ void Farm::run(ImageProcessor* processor)
 						processor->ready_to_resize = true;
 					}
 
-					//notivies to resize image
+					//notifies to resize image
 					processor->cv.notify_all();
 
 					break;
@@ -48,7 +49,6 @@ void Farm::run(ImageProcessor* processor)
 			}
 
 			//effects and processes to be done 
-
 			if (!task.image.empty()) {
 				processor->CheckPixelQuality(task.image, task.startY, task.endY);
 				cv::Rect roi(0, task.startY, task.image.cols, task.endY - task.startY);
